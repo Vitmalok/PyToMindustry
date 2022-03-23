@@ -8,28 +8,6 @@ import basic
 
 _opnames = dis.opname
 _compops = dis.cmp_op
-_op_inputs_outputs = {
-	'read': ((2, 3), (1,)),
-	'write': ((1, 2, 3), ()),
-	'draw': ((2, 3, 4, 5, 6, 7), ()),
-	'print': ((1,), ()),
-	'drawflush': ((1,), ()),
-	'printflush': ((1,), ()),
-	'getlink': ((2,), (1,)),
-	'control': ((2, 3, 4, 5, 6), ()),
-	'radar': ((5, 6), (7,)),
-	'sensor': ((2,), (1,)),
-	'set': ((2,), (1,)),
-	'op': ((3, 4), (2,)),
-	'wait': ((1,), ()),
-	'lookup': ((3,), (2,)),
-	'end': ((), ()),
-	'jump': ((3, 4), ()),
-	'ubind': ((), ()),
-	'ucontrol': ((2, 3, 4, 5, 6), ()),
-	'uradar': ((6,), (7,)),
-	'ulocate': ((3,), (5, 6, 7, 8)),
-}
 
 
 
@@ -313,45 +291,6 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 			print()
 	
 	return mindustry, value_to_return
-
-def optimize(translated, debug_print=False):
-	if debug_print:
-		print()
-		print(*translated, sep='\n', end='\n\n')
-	
-	optimized = translated.copy()
-	variables = {}
-	
-	for strnum in range(len(translated)):
-		string = translated[strnum]
-		inputs = []
-		outputs = []
-		
-		inputs, outputs = _op_inputs_outputs[string[0]]
-		
-		'''for i in inputs:
-			try:
-				var = string[i]
-			except IndexError:
-				print(f'IndexError with {string}[{i}]')
-			
-			if isinstance(var, Name):
-				try:
-					variables.pop(str(var))
-				except KeyError:
-					pass
-		
-		for i in outputs:
-			var = string[i]
-			
-			if str(var) in variables:
-				optimized[variables[str(var)]] = None
-			
-			variables[str(var)] = strnum'''
-		
-		
-	
-	return optimized
 
 def to_str(translated):
 	return '\n'.join(map(lambda x: ' '.join(map(str, x)), translated))
