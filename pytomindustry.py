@@ -1,5 +1,4 @@
 import dis
-from collections import defaultdict
 
 from ptm_types import *
 import basic
@@ -56,7 +55,7 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 	redefined = {}
 	basedefined = set(basic.names.keys())
 	baserenamed = set(basic.renamed_names.keys())
-	deferred_jumps = defaultdict(list)
+	deferred_jumps = {}
 	lines = {}
 	
 	value_to_return = None
@@ -202,9 +201,14 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 						if opname.startswith('JUMP_IF_'):
 							current_quantvar.next()
 							mindustry.append(['set', current_quantvar.copy(), stack.pop()])
-							deferred_jumps[jump_to].append((len(mindustry), 1, current_quantvar.copy()))
+							jump = (len(mindustry), 1, current_quantvar.copy())
 						else:
-							deferred_jumps[jump_to].append((len(mindustry), 1))
+							jump = (len(mindustry), 1)
+						
+						if jump_to in deffered_jumps:
+							deferred_jumps[jump_to].append(jump)
+						else:
+							deferred_jumps[jump_to] = [jump]
 						
 						mindustry.append(['jump', None] + pattern)
 				
