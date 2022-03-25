@@ -167,6 +167,7 @@ names = {
 		['getlink', '%out', '%arg'],
 		['radar', '%arg', '%arg', '%arg', '%arg', '%arg', '%arg', '%out'],
 		['wait', '%arg'],
+		['lookup', '%arg', '%out', '%arg'],
 		['ubind', '%arg'],
 		['uradar', '%arg', '%arg', '%arg', '%arg', '%arg', '%out'],
 		['ulocate', '%arg', '%arg', '%arg', '%arg', '%arg', '%out', '%out'],
