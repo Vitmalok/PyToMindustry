@@ -112,8 +112,16 @@ class _range_obj:
 	def FOR_ITER(self, mindustry, stack, current_stackvar, deferred_jumps, lines, field_of_view, jump_to):
 		i = Name(f'{field_of_view}_i')
 		mindustry.append(['op', 'add', i, i, Const(self.step)])
+		
+		jump = (len(mindustry), 1)
+		
+		if jump_to in deferred_jumps:
+			deferred_jumps[jump_to].append(jump)
+		else:
+			deferred_jumps[jump_to] = [jump]
+		
 		mindustry.append(['jump', None, 'greaterThanEq', i, self.stop])
-		deferred_jumps[jump_to].append((len(mindustry) - 1, 1))
+		
 		return i
 
 class _print_func:
@@ -163,6 +171,8 @@ names = {
 		'image': _create_simple_func_class(['draw', 'image', '%arg', '%arg', '%@arg', '%arg', '%arg', 0]),
 	}),
 	'print': _print_func,
+	'drawflush': _create_simple_func_class(['drawflush', '%arg']),
+	'printflush': _create_simple_func_class(['printflush', '%arg']),
 	'getlink': _create_simple_func_class(['getlink', '%out', '%arg']),
 	'len': _create_simple_func_class(['op', 'len', '%out', '%arg', '%arg']),
 	'abs': _create_simple_func_class(['op', 'abs', '%out', '%arg', 0]),
@@ -195,8 +205,8 @@ names = {
 }
 
 methods = {
-	'drawFlush': _create_simple_method_class(['drawflush']),
-	'printflush': _create_simple_method_class(['printflush']),
+	'drawflush': _create_simple_method_class(['drawflush', '%arg']),
+	'printflush': _create_simple_method_class(['printflush', '%arg']),
 	'off': _create_simple_method_class(['control', 'enabled', 0, 0, 0, 0]),
 	'on': _create_simple_method_class(['control', 'enabled', 1, 0, 0, 0]),
 	'enabled': _create_simple_method_class(['control', 'enabled', '%arg', 0, 0, 0]),

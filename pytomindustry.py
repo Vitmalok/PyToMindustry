@@ -79,6 +79,8 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 						stack.append(quantvar)
 					
 					mindustry[jump[0]][jump[1]] = len(mindustry)
+				
+				deferred_jumps.pop(opnum)
 			
 			match opname:
 				case 'NOP':
@@ -240,7 +242,7 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 						mindustry, stack, current_stackvar, deferred_jumps, lines, pyname.name
 					))
 				case 'FOR_ITER':
-					pyname = stack.pop()
+					pyname = stack[-1]
 					stack.append(pyname.contained_object.FOR_ITER(
 						mindustry, stack, current_stackvar, deferred_jumps, lines, pyname.name, opnum + arg*2 + 2
 					))
@@ -278,7 +280,7 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 									string_copy[1] += len(mindustry)
 							
 							for arg_i in range(len(args)):
-								mindustry.append(['set', new_function.code_object.co_varnames[arg_i], args[arg_i]])
+								mindustry.append(['set', f'{field_of_view}_{new_function.code_object.co_varnames[arg_i]}', args[arg_i]])
 							
 							mindustry.extend(translated_code0)
 							
