@@ -5,19 +5,13 @@ import basic
 
 
 
-_opnames = dis.opname
-_compops = dis.cmp_op
-
-
-
 def _add_names_to_bytes(bytes_):
 	zzz = []
-	
 	flag = True
 	
 	for q in bytes_:
 		if flag:
-			zzz.append(_opnames[q])
+			zzz.append(dis.opname[q])
 			if q >= 90:
 				flag = False
 		else:
@@ -50,11 +44,14 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 	
 	mindustry = []
 	stack = []
+	
 	current_stackvar = Stackvar(field_of_view)
 	current_quantvar = Quantvar(field_of_view)
+	
 	redefined = {}
 	basedefined = set(basic.names.keys())
 	baserenamed = set(basic.renamed_names.keys())
+	
 	deferred_jumps = {}
 	lines = {}
 	
@@ -63,7 +60,14 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 	try:
 		for opnum in range(0, len(named_code), 2):
 			opname = named_code[opnum]
-			arg = named_code[opnum + 1]
+			
+			if opname == 'EXTENDED_ARG':
+				arg += named_code[opnum + 1] << arg_len*8
+				arg_len += 1
+				continue
+			else:
+				arg = named_code[opnum + 1]
+				arg_len = 1
 			
 			lines[opnum] = len(mindustry)
 			
@@ -90,12 +94,13 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 				
 				case 'POP_TOP':
 					stack.pop()
-				case 'ROT_TWO':
-					stack[-2], stack[-1] = stack[-1], stack[-2]
-				case 'ROT_THREE':
-					stack[-3], stack[-2], stack[-1] = stack[-1], stack[-3], stack[-2]
-				case 'ROT_FOUR':
-					stack[-4], stack[-3], stack[-2], stack[-1] = stack[-1], stack[-4], stack[-3], stack[-2]
+				case opname if opname.startswith('ROT_'):
+					stack.insert({
+						'ROT_TWO': -1,
+						'ROT_THREE': -2,
+						'ROT_FOUR': -3,
+						'ROT_N': -arg + 1,
+					}[opname], stack.pop())
 				case 'DUP_TOP':
 					stack.append(stack[-1])
 				case 'DUP_TOP_TWO':
@@ -105,14 +110,14 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 				case 'UNPACK_SEQUENCE':
 					stack.extend(reversed(stack.pop()))
 				
-				case s if s.startswith('UNARY_'):
+				case opname if opname.startswith('UNARY_'):
 					stack.append(stack.pop().unary_op(mindustry, stack, current_stackvar, opname))
-				case s if s.startswith('BINARY_') and not s.endswith('_MATRIX_MULTIPLY'):
+				case opname if opname.startswith('BINARY_') and not opname.endswith('_MATRIX_MULTIPLY'):
 					stack.append(stack.pop(-2).binary_op(mindustry, stack, current_stackvar, opname, stack.pop()))
-				case s if s.startswith('INPLACE_') and not s.endswith('_MATRIX_MULTIPLY'):
+				case opname if opname.startswith('INPLACE_') and not opname.endswith('_MATRIX_MULTIPLY'):
 					stack.append(stack.pop(-2).inplace_op(mindustry, stack, current_stackvar, opname, stack.pop()))
 				case 'COMPARE_OP':
-					stack.append(stack.pop(-2).compare_op(mindustry, stack, current_stackvar, _compops[arg], stack.pop()))
+					stack.append(stack.pop(-2).compare_op(mindustry, stack, current_stackvar, dis.cmp_op[arg], stack.pop()))
 				case 'IS_OP':
 					stack.append(stack.pop(-2).compare_op(mindustry, stack, current_stackvar, 'is', stack.pop()))
 				
@@ -205,7 +210,7 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 						else:
 							jump = (len(mindustry), 1)
 						
-						if jump_to in deffered_jumps:
+						if jump_to in deferred_jumps:
 							deferred_jumps[jump_to].append(jump)
 						else:
 							deferred_jumps[jump_to] = [jump]
