@@ -9,10 +9,8 @@ The following features are currently supported:
 
 # Usage
 
-`
-from py_to_mindustry import py_to_mindustry
-print(py_to_mindustry(your_program_text))
-`
+    from py_to_mindustry import py_to_mindustry
+    print(py_to_mindustry(your_program_text))
 
 # How to use Mindustry commands
 
