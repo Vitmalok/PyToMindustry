@@ -1,4 +1,4 @@
-# PyToMindustry
+# py_to_mindustry
 
 Translator from Python to Mindustry processor language
 
@@ -7,9 +7,12 @@ The following features are currently supported:
 - Arbitrarily complex mathematical and logical expressions
 - Following keywords: break, continue, def, elif, else, for, if, lambda, pass, return, while
 
-# How to use PyToMindustry
+# Usage
 
-
+`
+from py_to_mindustry import py_to_mindustry
+print(py_to_mindustry(your_program_text))
+`
 
 # How to use Mindustry commands
 
