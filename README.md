@@ -10,7 +10,7 @@ The following features are currently supported:
 # Usage
 
     python -m pip install py_to_mindustry
- 
+
     from py_to_mindustry import py_to_mindustry
     print(py_to_mindustry(your_program_text))
 
