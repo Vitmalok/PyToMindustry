@@ -5,7 +5,7 @@ Translator from Python to Mindustry processor language
 The following features are currently supported:
 - All built-in commands in Mindustry
 - Arbitrarily complex mathematical and logical expressions
-- Following keywords: break, continue, def, elif, else, for, if, lambda, pass, return, while
+- Following keywords: `False`, `None`, `True`, `and`, `break`, `continue`, `def`, `elif`, `else`, `for`, `global`, `if`, `is`, `lambda`, `not`, `or`, `pass`, `return`, `while`
 
 # Usage
 

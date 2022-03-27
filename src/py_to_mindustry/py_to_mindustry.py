@@ -5,10 +5,14 @@ from py_to_mindustry import basic
 
 
 
-# ...
+# Заменяет номера операций в байт-коде на их человеко-читаемые имена
 def _add_names_to_bytes(bytes_):
 	return [bytes_[i] if i%2 else dis.opname[bytes_[i]] for i in range(len(bytes_))]
 
+# Переводит откомпилированный Python-код в список команд для процессора Mindustry.
+# Каждая команда в свою очередь является списком из сущностей, каждая из которых имеет метод __repr__.
+# Аргумент field_of_view - имя области действия. Для кода функции, определяемой в главной программе, это будет имя функции.
+# Аргумент high_redefined - словарь имён, переопределённых снаружи области действия.
 def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 	co_code = compiled.co_code
 	co_cellvars = compiled.co_cellvars
@@ -31,18 +35,35 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 		print(f'co_stacksize: {co_stacksize}')
 		print(f'co_varnames:  {co_varnames}', end='\n\n')
 	
-	mindustry = []
-	stack = []
+	mindustry = []  # результат трансляции
+	stack = []  # симуляция стека виртуальной машины Python
 	
+	# Процессоры Mindustry не имеют встроенных возможностей для работы со стеком.
+	# Поэтому при использовании в программе значения со стека, во время трансляции
+	# вместо значения со стека подставляется current_stackvar.
 	current_stackvar = Stackvar(field_of_view)
+	# При вычислении значения логических выражений Python использует команды JUMP_IF_..._OR_POP.
+	# Если во время выполнения такой команды произошёл прыжок, то верхнее значение стека остаётся.
+	# Иначе верхнее значение стека уничтожается, но после выполнения кода, следующего от этой команды до места,
+	# куда мог бы произойти прыжок, должно сгенерироваться и попасть на стек новое значение.
+	# То есть после выполнения этого блока на верху стека может быть два разных объекта.
+	# Поэтому значения на верху стека перед прохождением транслятором этого блока и после записываются
+	# в current_quantvar, которое затем кладётся на стек.
 	current_quantvar = Quantvar(field_of_view)
 	
-	redefined = {}
-	basedefined = set(basic.names.keys())
-	baserenamed = set(basic.renamed_names.keys())
+	redefined = {}  # словарь имён, переопределённых внутри области действия
+	basedefined = set(basic.names.keys())  # множество имён, определённых для поддержки встроенных команд Mindustry
+	baserenamed = set(basic.renamed_names.keys())  # множество имён, которые должны употребляться под другими именами
 	
-	deferred_jumps = {}
-	lines = {}
+	# В операциях JUMP используются номера Python-операций, но они не соопадают с номерами Mindustry-операций.
+	# Поэтому используется словарь lines для установления соответствия между уже пройденными номерами,
+	# и словарь deferred_jumps для откладывания выяснения номера Mindustry-операции, на которую ведёт прыжок в будущее.
+	lines = {}  # ключ - номер Python-операции, значение - номер Mindustry-операции
+	deferred_jumps = {}  # ключ - номер Python-операции, значение - [
+		# номер Mindustry-операции,
+		# номер сущности внутри Mindustry-операции,
+		# (опционально) quantvar (см. комментарий к current_quantvar)
+	# ]
 	
 	value_to_return = None
 	
@@ -51,6 +72,7 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 			opname = named_code[opnum]
 			
 			if opname == 'EXTENDED_ARG':
+				# Добавление старшего байта к аргументу
 				arg += named_code[opnum + 1] << arg_len*8
 				arg_len += 1
 				continue
@@ -61,6 +83,7 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 			lines[opnum] = len(mindustry)
 			
 			if opnum in deferred_jumps:
+				# Указание номера Mindustry-операции для прыжков, которые ведут на данную Python-операцию
 				for jump in deferred_jumps[opnum]:
 					if len(jump) > 2:
 						quantvar = jump[2]
@@ -101,6 +124,7 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 				case 'UNPACK_SEQUENCE':
 					stack.extend(reversed(stack.pop()))
 				
+				# Методы .unary_op, .binary_op, .inplace_op и .compare_op определены в классе ptm_types.Var
 				case opname if opname.startswith('UNARY_'):
 					stack.append(stack.pop().unary_op(mindustry, stack, current_stackvar, opname))
 				case opname if opname.startswith('BINARY_') and not opname.endswith('_MATRIX_MULTIPLY'):
@@ -152,7 +176,7 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 				case 'STORE_NAME' | 'STORE_GLOBAL' | 'STORE_FAST':
 					pyname = stack.pop()
 					name = f'{field_of_view}_{co_varnames[arg]}' if opname == 'STORE_FAST' else co_names[arg]
-					print('!!!', name)
+					
 					if hasattr(pyname, 'contained_object'):
 						object_ = PyName(name, pyname.contained_object)
 					else:
@@ -290,8 +314,10 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 	
 	return mindustry, value_to_return
 
+# Переводит список команд - списков сущностей в строку
 def to_str(translated):
 	return '\n'.join(map(lambda x: ' '.join(map(str, x)), translated))
 
+# Переводит текст Python-программы в текст Mindustry-программы
 def py_to_mindustry(py_program_text, debug_print=False):
 	return to_str(translate(compile(py_program_text, '', 'exec'), debug_print=debug_print)[0])
