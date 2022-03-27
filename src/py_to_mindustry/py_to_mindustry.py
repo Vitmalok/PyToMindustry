@@ -5,20 +5,9 @@ from py_to_mindustry import basic
 
 
 
+# ...
 def _add_names_to_bytes(bytes_):
-	zzz = []
-	flag = True
-	
-	for q in bytes_:
-		if flag:
-			zzz.append(dis.opname[q])
-			if q >= 90:
-				flag = False
-		else:
-			zzz.append(q)
-			flag = True
-	
-	return zzz
+	return [bytes_[i] if i%2 else dis.opname[bytes_[i]] for i in range(len(bytes_))]
 
 def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 	co_code = compiled.co_code
@@ -136,9 +125,9 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 						stack.append(Name(co_names[arg]))
 				case 'LOAD_FAST':
 					if co_varnames[arg] in redefined:
-						stack.append(field_of_view + '_' + redefined[co_varnames[arg]])
+						stack.append(redefined[co_varnames[arg]])
 					else:
-						stack.append(Name(field_of_view + '_' + co_varnames[arg]))
+						stack.append(Name(f'{field_of_view}_{co_varnames[arg]}'))
 				case 'LOAD_GLOBAL':
 					if co_names[arg] in high_redefined:
 						stack.append(high_redefined[co_names[arg]])
@@ -160,30 +149,28 @@ def translate(compiled, field_of_view='', high_redefined={}, debug_print=False):
 				case 'LOAD_METHOD':
 					stack.append(co_names[arg])
 				
-				case 'STORE_NAME':
+				case 'STORE_NAME' | 'STORE_GLOBAL' | 'STORE_FAST':
 					pyname = stack.pop()
-					
+					name = f'{field_of_view}_{co_varnames[arg]}' if opname == 'STORE_FAST' else co_names[arg]
+					print('!!!', name)
 					if hasattr(pyname, 'contained_object'):
-						object_ = PyName(field_of_view + co_names[arg], pyname.contained_object)
+						object_ = PyName(name, pyname.contained_object)
 					else:
-						object_ = Name(field_of_view + co_names[arg])
+						object_ = Name(name)
 						mindustry.append(['set', object_, pyname])
 					
-					redefined[co_names[arg]] = object_
-				case 'STORE_FAST':
-					...
-				case 'STORE_GLOBAL':
-					mindustry.append(['set', Name(co_names[arg]), stack.pop()])
+					redefined[co_varnames[arg] if opname == 'STORE_FAST' else co_names[arg]] = object_
 				case 'STORE_SUBSCR':
 					mindustry.append(['write', stack.pop(-3), stack.pop(-2), stack.pop()])
 				case 'STORE_ATTR':
 					pyname = stack.pop()
-					
+					value = stack.pop()
+
 					if hasattr(pyname, 'contained_object'):
-						setattr(pyname.contained_object, co_names[arg], stack.pop())
+						setattr(pyname.contained_object, co_names[arg], value)
 					else:
 						basic.attrs[co_names[arg]].STORE_ATTR(
-							mindustry, stack, current_stackvar, deferred_jumps, lines, pyname.name, stack.pop()
+							mindustry, stack, current_stackvar, deferred_jumps, lines, pyname.name, value
 						)
 				
 				case 'JUMP_IF_NOT_EXC_MATCH':
